@@ -1,4 +1,6 @@
-use super::scanner::{Keyword, Token, Tokens, TokenDirection};
+use std::ops::{Add, Div, Mul, Sub};
+
+use super::scanner::{Keyword, Token, TokenDirection, Tokens};
 
 #[derive(Debug)]
 pub enum Operator {
@@ -34,12 +36,84 @@ impl From<&Token> for Operator {
     }
 }
 
-#[derive(Debug)]
+#[derive(PartialEq, PartialOrd, Debug)]
 pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Number(f32),
     Nil,
+}
+
+impl Sub for LiteralValue {
+    type Output = LiteralValue;
+
+    fn sub(self, rhs: LiteralValue) -> Self::Output {
+        match self {
+            LiteralValue::Boolean(_) => panic!("Cannot subtract boolean values"),
+            LiteralValue::String(_) => panic!("Cannot subtract string values"),
+            LiteralValue::Number(lhs_value) => match rhs {
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value - lhs_value),
+                _ => panic!("Cannot subtract values with different types"),
+            },
+            LiteralValue::Nil => panic!("Cannot subtract nil values"),
+        }
+    }
+}
+
+impl Add for LiteralValue {
+    type Output = LiteralValue;
+
+    fn add(self, rhs: LiteralValue) -> Self::Output {
+        match self {
+            LiteralValue::Boolean(_) => panic!("Cannot add boolean values"),
+            LiteralValue::String(lhs_value) => match rhs {
+                LiteralValue::String(rhs_value) => LiteralValue::String(rhs_value + &lhs_value),
+                _ => panic!("Cannot add values with different types"),
+            },
+            LiteralValue::Number(lhs_value) => match rhs {
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value + lhs_value),
+                _ => panic!("Cannot add values with different types"),
+            },
+            LiteralValue::Nil => panic!("Cannot add nil values"),
+        }
+    }
+}
+
+impl Div for LiteralValue {
+    type Output = LiteralValue;
+
+    fn div(self, rhs: LiteralValue) -> Self::Output {
+        match self {
+            LiteralValue::Boolean(_) => panic!("Cannot divide boolean values"),
+            LiteralValue::String(_) => panic!("Cannot divide string values"),
+            LiteralValue::Number(lhs_value) => match rhs {
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value / lhs_value),
+                _ => panic!("Cannot divide values with different types"),
+            },
+            LiteralValue::Nil => panic!("Cannot divide nil values"),
+        }
+    }
+}
+
+impl Mul for LiteralValue {
+    type Output = LiteralValue;
+
+    fn mul(self, rhs: LiteralValue) -> Self::Output {
+        match self {
+            LiteralValue::Boolean(_) => panic!("Cannot multiply boolean values"),
+            LiteralValue::String(lhs_value) => match rhs {
+                LiteralValue::Number(rhs_value) => {
+                    LiteralValue::String(lhs_value.repeat(rhs_value as usize))
+                }
+                _ => panic!("Strings can only be multiplied by a number"),
+            },
+            LiteralValue::Number(lhs_value) => match rhs {
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value / lhs_value),
+                _ => panic!("Cannot multiply values with different types"),
+            },
+            LiteralValue::Nil => panic!("Cannot multiply nil values"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -64,10 +138,7 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     pub fn parse_expr_from_tokens(tokens: &'a Tokens) -> Expression {
-        let mut parser = Self {
-            tokens,
-            current: 0,
-        };
+        let mut parser = Self { tokens, current: 0 };
         parser.parse()
     }
 
@@ -98,7 +169,7 @@ impl<'a> Parser<'a> {
 
     fn equality(&mut self) -> Expression {
         let mut expr = self.comparison();
-        
+
         while matches!(self.peek(), Some(Token::BangEquals | Token::EqualsEquals)) {
             let operator: Operator = self.peek().unwrap().into();
             self.advance();
@@ -117,7 +188,7 @@ impl<'a> Parser<'a> {
 
     fn comparison(&mut self) -> Expression {
         let mut expr = self.term();
-        
+
         while matches!(
             self.peek(),
             Some(Token::Greater | Token::GreaterEqual | Token::Less | Token::LessEqual)
@@ -141,7 +212,7 @@ impl<'a> Parser<'a> {
 
     fn term(&mut self) -> Expression {
         let mut expr = self.factor();
-        
+
         while matches!(self.peek(), Some(Token::Minus | Token::Plus)) {
             let operator: Operator = self.peek().unwrap().into();
             self.advance();
@@ -160,7 +231,7 @@ impl<'a> Parser<'a> {
 
     fn factor(&mut self) -> Expression {
         let mut expr = self.unary();
-        
+
         while matches!(self.peek(), Some(Token::Slash | Token::Star)) {
             let operator: Operator = self.peek().unwrap().into();
             self.advance();
@@ -179,15 +250,12 @@ impl<'a> Parser<'a> {
 
     fn unary(&mut self) -> Expression {
         let current = self.peek();
-        if matches!(current, Some(Token::Bang | Token::Minus)) {
+        if matches!(current, Some(Token::Bang | Token::Minus | Token::Plus)) {
             let operator: Operator = current.unwrap().into();
             self.advance();
             let right = Box::new(self.unary());
 
-            return Expression::Unary {
-                right,
-                operator,
-            };
+            return Expression::Unary { right, operator };
         }
 
         self.primary()
@@ -195,11 +263,17 @@ impl<'a> Parser<'a> {
 
     fn primary(&mut self) -> Expression {
         match self.peek_then_advance() {
-            Some(Token::Keyword(Keyword::False)) => Expression::Literal(LiteralValue::Boolean(false)),
+            Some(Token::Keyword(Keyword::False)) => {
+                Expression::Literal(LiteralValue::Boolean(false))
+            }
             Some(Token::Keyword(Keyword::True)) => Expression::Literal(LiteralValue::Boolean(true)),
             Some(Token::Keyword(Keyword::Nil)) => Expression::Literal(LiteralValue::Nil),
-            Some(Token::Number(number)) => Expression::Literal(LiteralValue::Number(number.clone())),
-            Some(Token::String(string)) => Expression::Literal(LiteralValue::String(string.clone())),
+            Some(Token::Number(number)) => {
+                Expression::Literal(LiteralValue::Number(number.clone()))
+            }
+            Some(Token::String(string)) => Expression::Literal(LiteralValue::String(
+                string[1..string.len() - 1].to_string(),
+            )),
             Some(Token::Paren(TokenDirection::Left)) => {
                 let expr = self.expression();
                 match self.peek() {
@@ -208,8 +282,7 @@ impl<'a> Parser<'a> {
                     }
                     _ => panic!("Expected ')' after expression"),
                 }
-
-            },
+            }
             None => panic!("TODO: Handle EOF"),
             _ => panic!("Syntax error??"),
         }
@@ -288,7 +361,8 @@ mod tests {
 
     #[test]
     fn complex_expression() {
-        let tokens = tokens!("123 * 2 - 456 < 42 + 99").expect("Scanner should not fail to parse source");
+        let tokens =
+            tokens!("123 * 2 - 456 < 42 + 99").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
         let result = parser.parse();
