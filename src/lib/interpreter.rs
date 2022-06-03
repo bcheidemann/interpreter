@@ -194,4 +194,13 @@ mod tests {
 
         assert_eq!(format!("{result:?}"), "Boolean(true)");
     }
+
+    #[test]
+    fn regression_number_multiply_string() {
+        let expression = expr!("3*\"Hello \"");
+
+        let result = evaluate_expression(expression);
+
+        assert_eq!(format!("{result:?}"), "String(\"Hello Hello Hello \")");
+    }
 }

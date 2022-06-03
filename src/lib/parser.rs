@@ -108,7 +108,8 @@ impl Mul for LiteralValue {
                 _ => panic!("Strings can only be multiplied by a number"),
             },
             LiteralValue::Number(lhs_value) => match rhs {
-                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value / lhs_value),
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value * lhs_value),
+                LiteralValue::String(rhs_value) => LiteralValue::String(rhs_value.repeat(lhs_value as usize)),
                 _ => panic!("Cannot multiply values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot multiply nil values"),
@@ -276,7 +277,7 @@ impl<'a> Parser<'a> {
             )),
             Some(Token::Paren(TokenDirection::Left)) => {
                 let expr = self.expression();
-                match self.peek() {
+                match self.peek_then_advance() {
                     Some(Token::Paren(TokenDirection::Right)) => {
                         Expression::Grouping(Box::new(expr))
                     }
@@ -368,5 +369,15 @@ mod tests {
         let result = parser.parse();
 
         assert_eq!(format!("{result:?}"), "Binary { left: Binary { left: Binary { left: Literal(Number(123.0)), right: Literal(Number(2.0)), operator: Star }, right: Literal(Number(456.0)), operator: Minus }, right: Binary { left: Literal(Number(42.0)), right: Literal(Number(99.0)), operator: Plus }, operator: Less }");
+    }
+
+    #[test]
+    fn regression_lhs_grouped_binary_expressions() {
+        let tokens = tokens!("(1)+2").expect("Scanner should not fail to parse source");
+        let mut parser = Parser::new(&tokens);
+
+        let result = parser.parse();
+
+        assert_eq!(format!("{result:?}"), "Binary { left: Grouping(Literal(Number(1.0))), right: Literal(Number(2.0)), operator: Plus }");
     }
 }
