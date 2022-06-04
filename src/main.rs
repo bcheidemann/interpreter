@@ -6,6 +6,7 @@ mod lib;
 fn main() {
     let mut stdout = io::stdout().lock();
     let mut stdin = io::stdin().lock();
+    let mut interpreter = lib::interpreter::Interpreter::new(lib::parser::Program::new());
 
     loop {
         let mut input = String::new();
@@ -23,8 +24,7 @@ fn main() {
         let mut scanner = lib::scanner::Scanner::from_source(&input);
         let mut parser =
             lib::parser::Parser::new(scanner.scan_tokens().expect("Failed at scanner"));
-        let program = parser.parse();
-        let mut interpreter = lib::interpreter::Interpreter::new(program);
-        interpreter.run();
+        let mut statements = parser.parse().to_statements();
+        interpreter.evaluate_statements(&mut statements);
     }
 }

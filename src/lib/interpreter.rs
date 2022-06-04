@@ -20,6 +20,11 @@ impl Interpreter {
         }
     }
 
+    pub fn evaluate_statements(&mut self, statements: &mut Vec<Statement>) {
+        self.program.add_statements(statements);
+        self.run();
+    }
+
     fn evaluate_statement(&self, statement: &Statement) {
         match statement {
             Statement::Print(expression) => self.print(expression),

@@ -140,8 +140,16 @@ impl Program {
         self.0.push(statement);
     }
 
+    pub fn add_statements(&mut self, statements: &mut Vec<Statement>) {
+        self.0.append(statements);
+    }
+
     pub fn get(&self, index: usize) -> Option<&Statement> {
         self.0.get(index)
+    }
+
+    pub fn to_statements(self) -> Vec<Statement> {
+        self.0
     }
 }
 
