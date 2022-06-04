@@ -36,12 +36,23 @@ impl From<&Token> for Operator {
     }
 }
 
-#[derive(PartialEq, PartialOrd, Debug)]
+#[derive(PartialEq, PartialOrd, Debug, Clone)]
 pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Number(f32),
     Nil,
+}
+
+impl LiteralValue {
+    pub fn to_string(&self) -> String {
+        match self {
+            LiteralValue::Boolean(value) => format!("{value}"),
+            LiteralValue::String(value) => format!("{value}"),
+            LiteralValue::Number(value) => format!("{value}"),
+            LiteralValue::Nil => "nil".to_string(),
+        }
+    }
 }
 
 impl Sub for LiteralValue {
@@ -52,7 +63,7 @@ impl Sub for LiteralValue {
             LiteralValue::Boolean(_) => panic!("Cannot subtract boolean values"),
             LiteralValue::String(_) => panic!("Cannot subtract string values"),
             LiteralValue::Number(lhs_value) => match rhs {
-                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value - lhs_value),
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value - rhs_value),
                 _ => panic!("Cannot subtract values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot subtract nil values"),
@@ -67,11 +78,11 @@ impl Add for LiteralValue {
         match self {
             LiteralValue::Boolean(_) => panic!("Cannot add boolean values"),
             LiteralValue::String(lhs_value) => match rhs {
-                LiteralValue::String(rhs_value) => LiteralValue::String(rhs_value + &lhs_value),
+                LiteralValue::String(rhs_value) => LiteralValue::String(lhs_value + &rhs_value),
                 _ => panic!("Cannot add values with different types"),
             },
             LiteralValue::Number(lhs_value) => match rhs {
-                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value + lhs_value),
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value + rhs_value),
                 _ => panic!("Cannot add values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot add nil values"),
@@ -87,7 +98,7 @@ impl Div for LiteralValue {
             LiteralValue::Boolean(_) => panic!("Cannot divide boolean values"),
             LiteralValue::String(_) => panic!("Cannot divide string values"),
             LiteralValue::Number(lhs_value) => match rhs {
-                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value / lhs_value),
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value / rhs_value),
                 _ => panic!("Cannot divide values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot divide nil values"),
@@ -108,13 +119,36 @@ impl Mul for LiteralValue {
                 _ => panic!("Strings can only be multiplied by a number"),
             },
             LiteralValue::Number(lhs_value) => match rhs {
-                LiteralValue::Number(rhs_value) => LiteralValue::Number(rhs_value * lhs_value),
+                LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value * rhs_value),
                 LiteralValue::String(rhs_value) => LiteralValue::String(rhs_value.repeat(lhs_value as usize)),
                 _ => panic!("Cannot multiply values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot multiply nil values"),
         }
     }
+}
+
+#[derive(Debug)]
+pub struct Program(Vec<Statement>);
+
+impl Program {
+    pub fn new() -> Self {
+        Self(vec![])
+    }
+
+    pub fn add_statement(&mut self, statement: Statement) {
+        self.0.push(statement);
+    }
+
+    pub fn get(&self, index: usize) -> Option<&Statement> {
+        self.0.get(index)
+    }
+}
+
+#[derive(Debug)]
+pub enum Statement {
+    Print(Expression),
+    Expression(Expression),
 }
 
 #[derive(Debug)]
@@ -138,16 +172,28 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    // TODO: remove
     pub fn parse_expr_from_tokens(tokens: &'a Tokens) -> Expression {
         let mut parser = Self { tokens, current: 0 };
-        parser.parse()
+        parser.parse_expression()
     }
 
     pub fn new(tokens: &'a Tokens) -> Self {
         Self { tokens, current: 0 }
     }
 
-    pub fn parse(&mut self) -> Expression {
+    pub fn parse(&mut self) -> Program {
+        let mut program = Program(vec![]);
+
+        while self.current < self.tokens.len() {
+            program.add_statement(self.statement());
+        }
+
+        program
+    }
+
+    // TODO: remove
+    pub fn parse_expression(&mut self) -> Expression {
         self.expression()
     }
 
@@ -162,6 +208,35 @@ impl<'a> Parser<'a> {
 
     fn advance(&mut self) {
         self.current += 1;
+    }
+
+    fn consume_semicolon(&mut self) {
+        if matches!(self.peek(), Some(Token::SemiColon)) {
+            self.advance();
+        }
+        else {
+            panic!("Expected a semicolon after a print statement");
+        }
+    }
+
+    fn statement(&mut self) -> Statement {
+        match self.peek() {
+            Some(Token::Keyword(Keyword::Print)) => self.print(),
+            _ => self.expression_statement(),
+        }
+    }
+
+    fn print(&mut self) -> Statement {
+        self.advance();
+        let expr = self.expression();
+        self.consume_semicolon();
+        Statement::Print(expr)
+    }
+
+    fn expression_statement(&mut self) -> Statement {
+        let expr = self.expression();
+        self.consume_semicolon();
+        Statement::Expression(expr)
     }
 
     fn expression(&mut self) -> Expression {
@@ -315,7 +390,7 @@ mod tests {
         let tokens = tokens!("true").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Literal(Boolean(true))");
     }
@@ -325,7 +400,7 @@ mod tests {
         let tokens = tokens!("(true)").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Grouping(Literal(Boolean(true)))");
     }
@@ -335,7 +410,7 @@ mod tests {
         let tokens = tokens!("(true < false)").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Grouping(Binary { left: Literal(Boolean(true)), right: Literal(Boolean(false)), operator: Less })");
     }
@@ -345,7 +420,7 @@ mod tests {
         let tokens = tokens!("123 > 321").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Binary { left: Literal(Number(123.0)), right: Literal(Number(321.0)), operator: Greater }");
     }
@@ -355,7 +430,7 @@ mod tests {
         let tokens = tokens!("!-99").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Unary { right: Unary { right: Literal(Number(99.0)), operator: Minus }, operator: Bang }");
     }
@@ -366,7 +441,7 @@ mod tests {
             tokens!("123 * 2 - 456 < 42 + 99").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Binary { left: Binary { left: Binary { left: Literal(Number(123.0)), right: Literal(Number(2.0)), operator: Star }, right: Literal(Number(456.0)), operator: Minus }, right: Binary { left: Literal(Number(42.0)), right: Literal(Number(99.0)), operator: Plus }, operator: Less }");
     }
@@ -376,8 +451,38 @@ mod tests {
         let tokens = tokens!("(1)+2").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
-        let result = parser.parse();
+        let result = parser.parse_expression();
 
         assert_eq!(format!("{result:?}"), "Binary { left: Grouping(Literal(Number(1.0))), right: Literal(Number(2.0)), operator: Plus }");
+    }
+
+    #[test]
+    fn print() {
+        let tokens = tokens!("print 42;").expect("Scanner should not fail to parse source");
+        let mut parser = Parser::new(&tokens);
+
+        let result = parser.parse();
+
+        assert_eq!(format!("{result:?}"), "Program([Print(Literal(Number(42.0)))])");
+    }
+
+    #[test]
+    fn print_twice() {
+        let tokens = tokens!("print 42; print true;").expect("Scanner should not fail to parse source");
+        let mut parser = Parser::new(&tokens);
+
+        let result = parser.parse();
+
+        assert_eq!(format!("{result:?}"), "Program([Print(Literal(Number(42.0))), Print(Literal(Boolean(true)))])");
+    }
+
+    #[test]
+    fn expression_statement() {
+        let tokens = tokens!("42;").expect("Scanner should not fail to parse source");
+        let mut parser = Parser::new(&tokens);
+
+        let result = parser.parse();
+
+        assert_eq!(format!("{result:?}"), "Program([Expression(Literal(Number(42.0)))])");
     }
 }

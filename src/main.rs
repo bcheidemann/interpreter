@@ -23,9 +23,8 @@ fn main() {
         let mut scanner = lib::scanner::Scanner::from_source(&input);
         let mut parser =
             lib::parser::Parser::new(scanner.scan_tokens().expect("Failed at scanner"));
-        let expression = parser.parse();
-        let result = lib::interpreter::evaluate_expression(expression);
-
-        println!("{result:?}");
+        let program = parser.parse();
+        let mut interpreter = lib::interpreter::Interpreter::new(program);
+        interpreter.run();
     }
 }

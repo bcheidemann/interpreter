@@ -80,6 +80,10 @@ impl Tokens {
         self.0.push(token);
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     pub fn get(&self, index: usize) -> Option<&Token> {
         self.0.get(index)
     }
