@@ -142,7 +142,7 @@ impl Interpreter {
                     LiteralValue::String(_) => panic!("String values cannot be negated"),
                     LiteralValue::Number(value) => LiteralValue::Number(-value.clone()),
                     LiteralValue::Nil => panic!("Nil values cannot be negated"),
-                    LiteralValue::Identifier(identifier) => panic!("Unexpected unresolved identifier"),
+                    LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
                 }
             },
             Operator::Plus => self.evaluate_expression(right),
@@ -154,7 +154,7 @@ impl Interpreter {
                     LiteralValue::String(value) => LiteralValue::Boolean(value.len() == 0),
                     LiteralValue::Number(value) => LiteralValue::Boolean(value == 0.0),
                     LiteralValue::Nil => LiteralValue::Boolean(true),
-                    LiteralValue::Identifier(identifier) => panic!("Unexpected unresolved identifier"),
+                    LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
                 }
             },
         }

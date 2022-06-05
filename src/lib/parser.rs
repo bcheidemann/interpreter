@@ -79,16 +79,36 @@ impl Add for LiteralValue {
 
     fn add(self, rhs: LiteralValue) -> Self::Output {
         match self {
-            LiteralValue::Boolean(_) => panic!("Cannot add boolean values"),
+            LiteralValue::Boolean(lhs_value) => match rhs {
+                LiteralValue::String(rhs_value) => {
+                    LiteralValue::String(format!("{lhs_value}{rhs_value}"))
+                },
+                _ => panic!("Boolean values can only be added with string values"),
+            },
             LiteralValue::String(lhs_value) => match rhs {
                 LiteralValue::String(rhs_value) => LiteralValue::String(lhs_value + &rhs_value),
-                _ => panic!("Cannot add values with different types"),
+                LiteralValue::Boolean(rhs_value) => {
+                    LiteralValue::String(format!("{lhs_value}{rhs_value}"))
+                }
+                LiteralValue::Number(rhs_value) => {
+                    LiteralValue::String(format!("{lhs_value}{rhs_value}"))
+                }
+                LiteralValue::Identifier(_) => panic!("Cannot add unresolved identifier to string"),
+                LiteralValue::Nil => LiteralValue::String(format!("{lhs_value}nil")),
             },
             LiteralValue::Number(lhs_value) => match rhs {
                 LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value + rhs_value),
+                LiteralValue::String(rhs_value) => {
+                    LiteralValue::String(format!("{lhs_value}{rhs_value}"))
+                },
                 _ => panic!("Cannot add values with different types"),
             },
-            LiteralValue::Nil => panic!("Cannot add nil values"),
+            LiteralValue::Nil => match rhs {
+                LiteralValue::String(rhs_value) => {
+                    LiteralValue::String(format!("nil{rhs_value}"))
+                },
+                _ => panic!("Nil values can only be added with string values"),
+            },
             LiteralValue::Identifier(_) => panic!("Cannot add unresolved identifier"),
         }
     }
