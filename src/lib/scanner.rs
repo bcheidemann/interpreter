@@ -101,6 +101,7 @@ pub struct Scanner {
 }
 
 impl Scanner {
+    #[cfg(test)]
     pub fn parse_tokens_from_source(source: &str) -> CompilerResult<Tokens> {
         let mut scanner = Self::from_source(source);
         scanner.scan_tokens()?;
@@ -315,6 +316,7 @@ impl Scanner {
     }
 }
 
+#[cfg(test)]
 #[macro_export]
 macro_rules! tokens {
     ($source:expr) => {

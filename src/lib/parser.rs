@@ -219,10 +219,15 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    // TODO: remove
+    #[cfg(test)]
     pub fn parse_expr_from_tokens(tokens: &'a Tokens) -> Expression {
         let mut parser = Self { tokens, current: 0 };
         parser.parse_expression()
+    }
+
+    #[cfg(test)]
+    pub fn parse_expression(&mut self) -> Expression {
+        self.expression()
     }
 
     pub fn new(tokens: &'a Tokens) -> Self {
@@ -237,11 +242,6 @@ impl<'a> Parser<'a> {
         }
 
         program
-    }
-
-    // TODO: remove
-    pub fn parse_expression(&mut self) -> Expression {
-        self.expression()
     }
 
     fn peek(&self) -> Option<&Token> {
@@ -454,6 +454,7 @@ impl<'a> Parser<'a> {
     }
 }
 
+#[cfg(test)]
 #[macro_export]
 macro_rules! expr {
     ($source:expr) => {
