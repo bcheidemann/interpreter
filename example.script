@@ -1,0 +1,50 @@
+print "######################################";
+print "# Demo for interpreter version " + VERSION + " #";
+print "######################################";
+print "";
+
+print "This script will print out the volume of some shapes... behold!";
+print "";
+
+// Cube
+width = 10;
+height = 10;
+depth = 10;
+
+volume = width * height * depth;
+print "---";
+print "The volume of a " + width + "m x " + height + "m x " + depth + "m cube is " + volume + "m^3";
+print "---";
+print "";
+
+// Sphere
+radius = 8;
+Pi = 3.14;
+
+volume = (4/3)*Pi*radius*radius;
+
+print "---";
+print "The volume of a sphere with radius " + radius + "m is " + volume + "m^3";
+print "---";
+print "";
+
+// Composite Shape
+width_1 = 10;
+height_1 = 10;
+depth_1 = 10;
+
+volume = width_1 * height_1 * depth_1;
+
+width_2 = 5;
+height_2 = 5;
+depth_2 = 5;
+
+volume = volume + width_2 * height_2 * depth_2;
+
+print "---";
+print "The total volume of two cubes, who's dimensions are as follows:";
+print "  Cube #1: " + width_1 + "m x " + height_1 + "m x " + depth_1 + "m";
+print "  Cube #2: " + width_1 + "m x " + height_1 + "m x " + depth_1 + "m";
+print "Is " + volume + "m^3";
+print "---";
+print "";

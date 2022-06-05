@@ -1,4 +1,7 @@
-use super::{parser::{Expression, LiteralValue, Operator, Statement, Program, Declaration}, environment::Environment};
+use super::{
+    environment::Environment,
+    parser::{Declaration, Expression, LiteralValue, Operator, Program, Statement},
+};
 
 pub struct Interpreter {
     environment: Environment,
@@ -30,12 +33,13 @@ impl Interpreter {
     fn evaluate_declaration(&mut self) {
         match self.program.get(self.current) {
             Some(Declaration::VariableAssignment { identifier, value }) => {
-                self.environment.assign(identifier, self.evaluate_expression(value));
-            },
+                self.environment
+                    .assign(identifier, self.evaluate_expression(value));
+            }
             Some(Declaration::Statement(statement)) => {
                 self.evaluate_statement(statement);
-            },
-            None => {},
+            }
+            None => {}
         }
     }
 
@@ -62,21 +66,15 @@ impl Interpreter {
                 left,
                 right,
                 operator,
-            } => {
-                self.evaluate_binary_expression(left, right, operator)
-            }
-            Expression::Grouping(expression) => {
-                self.evaluate_expression(expression)
-            },
+            } => self.evaluate_binary_expression(left, right, operator),
+            Expression::Grouping(expression) => self.evaluate_expression(expression),
             Expression::Literal(LiteralValue::Identifier(identifier)) => {
                 self.environment.resolve(identifier).clone()
             }
-            Expression::Literal(literal_value) => {
-                literal_value.clone()
-            },
+            Expression::Literal(literal_value) => literal_value.clone(),
             Expression::Unary { right, operator } => {
                 self.evaluate_unary_expression(right, operator)
-            },
+            }
         }
     }
 
@@ -88,47 +86,23 @@ impl Interpreter {
     ) -> LiteralValue {
         let left_value = self.evaluate_expression(left);
         let right_value = self.evaluate_expression(right);
-    
+
         match operator {
-            Operator::BangEquals => {
-                LiteralValue::Boolean(left_value != right_value)
-            },
-            Operator::EqualsEquals => {
-                LiteralValue::Boolean(left_value == right_value)
-            },
-            Operator::Greater => {
-                LiteralValue::Boolean(left_value > right_value)
-            },
-            Operator::GreaterEqual => {
-                LiteralValue::Boolean(left_value >= right_value)
-            },
-            Operator::Less => {
-                LiteralValue::Boolean(left_value < right_value)
-            },
-            Operator::LessEqual => {
-                LiteralValue::Boolean(left_value > right_value)
-            },
-            Operator::Minus => {
-                left_value - right_value
-            },
-            Operator::Plus => {
-                left_value + right_value
-            },
-            Operator::Slash => {
-                left_value / right_value
-            },
-            Operator::Star => {
-                left_value * right_value
-            },
+            Operator::BangEquals => LiteralValue::Boolean(left_value != right_value),
+            Operator::EqualsEquals => LiteralValue::Boolean(left_value == right_value),
+            Operator::Greater => LiteralValue::Boolean(left_value > right_value),
+            Operator::GreaterEqual => LiteralValue::Boolean(left_value >= right_value),
+            Operator::Less => LiteralValue::Boolean(left_value < right_value),
+            Operator::LessEqual => LiteralValue::Boolean(left_value > right_value),
+            Operator::Minus => left_value - right_value,
+            Operator::Plus => left_value + right_value,
+            Operator::Slash => left_value / right_value,
+            Operator::Star => left_value * right_value,
             Operator::Bang => panic!("Invalid binary operator"),
         }
     }
 
-    fn evaluate_unary_expression(
-        &self,
-        right: &Expression,
-        operator: &Operator,
-    ) -> LiteralValue {
+    fn evaluate_unary_expression(&self, right: &Expression, operator: &Operator) -> LiteralValue {
         match operator {
             Operator::BangEquals => panic!("Invalid unary operator"),
             Operator::EqualsEquals => panic!("Invalid unary operator"),
@@ -136,26 +110,22 @@ impl Interpreter {
             Operator::GreaterEqual => panic!("Invalid unary operator"),
             Operator::Less => panic!("Invalid unary operator"),
             Operator::LessEqual => panic!("Invalid unary operator"),
-            Operator::Minus => {
-                match self.evaluate_expression(right) {
-                    LiteralValue::Boolean(_) => panic!("Boolean values cannot be negated"),
-                    LiteralValue::String(_) => panic!("String values cannot be negated"),
-                    LiteralValue::Number(value) => LiteralValue::Number(-value.clone()),
-                    LiteralValue::Nil => panic!("Nil values cannot be negated"),
-                    LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
-                }
+            Operator::Minus => match self.evaluate_expression(right) {
+                LiteralValue::Boolean(_) => panic!("Boolean values cannot be negated"),
+                LiteralValue::String(_) => panic!("String values cannot be negated"),
+                LiteralValue::Number(value) => LiteralValue::Number(-value.clone()),
+                LiteralValue::Nil => panic!("Nil values cannot be negated"),
+                LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
             },
             Operator::Plus => self.evaluate_expression(right),
             Operator::Slash => panic!("Invalid unary operator"),
             Operator::Star => panic!("Invalid unary operator"),
-            Operator::Bang => {
-                match self.evaluate_expression(right) {
-                    LiteralValue::Boolean(value) => LiteralValue::Boolean(!value),
-                    LiteralValue::String(value) => LiteralValue::Boolean(value.len() == 0),
-                    LiteralValue::Number(value) => LiteralValue::Boolean(value == 0.0),
-                    LiteralValue::Nil => LiteralValue::Boolean(true),
-                    LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
-                }
+            Operator::Bang => match self.evaluate_expression(right) {
+                LiteralValue::Boolean(value) => LiteralValue::Boolean(!value),
+                LiteralValue::String(value) => LiteralValue::Boolean(value.len() == 0),
+                LiteralValue::Number(value) => LiteralValue::Boolean(value == 0.0),
+                LiteralValue::Nil => LiteralValue::Boolean(true),
+                LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
             },
         }
     }
@@ -163,10 +133,10 @@ impl Interpreter {
 
 #[cfg(test)]
 mod tests {
-    use crate::{expr, tokens};
+    use crate::lib::environment::Environment;
     use crate::lib::parser::Parser;
     use crate::lib::scanner::Scanner;
-    use crate::lib::environment::Environment;
+    use crate::{expr, tokens};
 
     use super::*;
 

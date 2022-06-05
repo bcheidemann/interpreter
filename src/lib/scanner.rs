@@ -1,4 +1,7 @@
-use super::{error::CompilerResult, utils::{is_digit, is_alpha, is_alpha_numeric}};
+use super::{
+    error::CompilerResult,
+    utils::{is_alpha, is_alpha_numeric, is_digit},
+};
 
 const KW_AND: &str = "and";
 const KW_CLASS: &str = "class";
@@ -224,10 +227,11 @@ impl Scanner {
                             Some(Token::Number(
                                 self.source_chars[self.start..self.current]
                                     .into_iter()
-                                    .collect::<String>().parse().expect("Failed to parse float"),
+                                    .collect::<String>()
+                                    .parse()
+                                    .expect("Failed to parse float"),
                             ))
-                        }
-                        else if is_alpha(char) {
+                        } else if is_alpha(char) {
                             loop {
                                 match self.advance() {
                                     Some(char) => {
@@ -242,29 +246,26 @@ impl Scanner {
                             let alpha_numeric: String = self.source_chars[self.start..self.current]
                                 .into_iter()
                                 .collect();
-                            Some(
-                                match &alpha_numeric[..] {
-                                    KW_AND => Token::Keyword(Keyword::And),
-                                    KW_CLASS => Token::Keyword(Keyword::Class),
-                                    KW_ELSE => Token::Keyword(Keyword::Else),
-                                    KW_FALSE => Token::Keyword(Keyword::False),
-                                    KW_FOR => Token::Keyword(Keyword::For),
-                                    KW_FUN => Token::Keyword(Keyword::Function),
-                                    KW_IF => Token::Keyword(Keyword::If),
-                                    KW_NIL => Token::Keyword(Keyword::Nil),
-                                    KW_OR => Token::Keyword(Keyword::Or),
-                                    KW_PRINT => Token::Keyword(Keyword::Print),
-                                    KW_RETURN => Token::Keyword(Keyword::Return),
-                                    KW_SUPER => Token::Keyword(Keyword::Super),
-                                    KW_THIS => Token::Keyword(Keyword::This),
-                                    KW_TRUE => Token::Keyword(Keyword::True),
-                                    KW_VAR => Token::Keyword(Keyword::VariableDeclaration),
-                                    KW_WHILE => Token::Keyword(Keyword::While),
-                                    _ => Token::Identifier(alpha_numeric)
-                                }
-                            )
-                        }
-                        else {
+                            Some(match &alpha_numeric[..] {
+                                KW_AND => Token::Keyword(Keyword::And),
+                                KW_CLASS => Token::Keyword(Keyword::Class),
+                                KW_ELSE => Token::Keyword(Keyword::Else),
+                                KW_FALSE => Token::Keyword(Keyword::False),
+                                KW_FOR => Token::Keyword(Keyword::For),
+                                KW_FUN => Token::Keyword(Keyword::Function),
+                                KW_IF => Token::Keyword(Keyword::If),
+                                KW_NIL => Token::Keyword(Keyword::Nil),
+                                KW_OR => Token::Keyword(Keyword::Or),
+                                KW_PRINT => Token::Keyword(Keyword::Print),
+                                KW_RETURN => Token::Keyword(Keyword::Return),
+                                KW_SUPER => Token::Keyword(Keyword::Super),
+                                KW_THIS => Token::Keyword(Keyword::This),
+                                KW_TRUE => Token::Keyword(Keyword::True),
+                                KW_VAR => Token::Keyword(Keyword::VariableDeclaration),
+                                KW_WHILE => Token::Keyword(Keyword::While),
+                                _ => Token::Identifier(alpha_numeric),
+                            })
+                        } else {
                             return Err(format!(
                                 "Unexpected character ({}) on line {}",
                                 char, self.line
@@ -397,7 +398,6 @@ mod tests {
         assert_eq!(error, "Unexpected character (#) on line 2");
     }
 
-
     #[test]
     fn ignore_white_space() {
         let mut scanner = Scanner::from_source("\n\t!\r");
@@ -462,10 +462,7 @@ mod tests {
             .expect("Scanner should not fail to parse source");
         let token = tokens.0.get(0).expect("Expected a token");
 
-        assert_eq!(
-            format!("{tokens:?}"),
-            "Tokens([Number(123.0)])"
-        );
+        assert_eq!(format!("{tokens:?}"), "Tokens([Number(123.0)])");
 
         match token {
             Token::Number(value) => {
@@ -484,10 +481,7 @@ mod tests {
             .expect("Scanner should not fail to parse source");
         let token = tokens.0.get(0).expect("Expected a token");
 
-        assert_eq!(
-            format!("{tokens:?}"),
-            "Tokens([Number(123.456)])"
-        );
+        assert_eq!(format!("{tokens:?}"), "Tokens([Number(123.456)])");
 
         match token {
             Token::Number(value) => {
@@ -519,10 +513,7 @@ mod tests {
             .scan_tokens()
             .expect("Scanner should not fail to parse source");
 
-        assert_eq!(
-            format!("{tokens:?}"),
-            "Tokens([Number(123.0)])"
-        );
+        assert_eq!(format!("{tokens:?}"), "Tokens([Number(123.0)])");
     }
 
     #[test]

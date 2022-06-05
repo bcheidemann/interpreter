@@ -82,7 +82,7 @@ impl Add for LiteralValue {
             LiteralValue::Boolean(lhs_value) => match rhs {
                 LiteralValue::String(rhs_value) => {
                     LiteralValue::String(format!("{lhs_value}{rhs_value}"))
-                },
+                }
                 _ => panic!("Boolean values can only be added with string values"),
             },
             LiteralValue::String(lhs_value) => match rhs {
@@ -100,13 +100,11 @@ impl Add for LiteralValue {
                 LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value + rhs_value),
                 LiteralValue::String(rhs_value) => {
                     LiteralValue::String(format!("{lhs_value}{rhs_value}"))
-                },
+                }
                 _ => panic!("Cannot add values with different types"),
             },
             LiteralValue::Nil => match rhs {
-                LiteralValue::String(rhs_value) => {
-                    LiteralValue::String(format!("nil{rhs_value}"))
-                },
+                LiteralValue::String(rhs_value) => LiteralValue::String(format!("nil{rhs_value}")),
                 _ => panic!("Nil values can only be added with string values"),
             },
             LiteralValue::Identifier(_) => panic!("Cannot add unresolved identifier"),
@@ -271,7 +269,7 @@ impl<'a> Parser<'a> {
         if matches!(self.peek(), Some(Token::SemiColon)) {
             self.advance();
         } else {
-            panic!("Expected a semicolon after a print statement");
+            panic!("Expected a semicolon");
         }
     }
 
