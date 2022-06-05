@@ -3,48 +3,59 @@ print "# Demo for interpreter version " + VERSION + " #";
 print "######################################";
 print "";
 
-print "This script will print out the volume of some shapes... behold!";
-print "";
+// Usage:
+//   cargo run <shape> [...dimensions]
+//
+//   shape       cube | sphere
+//   dimensions  (cube) <width> <height> <depth>
+//               (sphere) <radius>
+//
+// Example:
+//   cargo run cube 2 3 5
+//   cargo run sphere 12
 
-// Cube
-width = 10;
-height = 10;
-depth = 10;
+// Constants
+Pi = 3.14159265359;
 
-volume = width * height * depth;
-print "---";
-print "The volume of a " + width + "m x " + height + "m x " + depth + "m cube is " + volume + "m^3";
-print "---";
-print "";
+if ARG_2 == nil {
+    print "Usage:";
+    print "  " + ARG_0 + " " + ARG_1 + " <shape> [...dimensions]";
+    print "";
+    print "  shape       cube | sphere";
+    print "  dimensions  (cube) <width> <height> <depth>";
+    print "              (sphere) <radius>";
+    print "";
+}
 
-// Sphere
-radius = 8;
-Pi = 3.14;
+if ARG_2 != nil {
+    if ARG_2 == "cube" {
+        width = ARG_3;
+        height = ARG_4;
+        depth = ARG_5;
 
-volume = (4/3)*Pi*radius*radius;
 
-print "---";
-print "The volume of a sphere with radius " + radius + "m is " + volume + "m^3";
-print "---";
-print "";
+        if width == nil print "Please provide a width argument";
+        if height == nil print "Please provide a height argument";
+        if depth == nil print "Please provide a depth argument";
 
-// Composite Shape
-width_1 = 10;
-height_1 = 10;
-depth_1 = 10;
+        if width != nil if height != nil if depth != nil {
+            volume = width * height * depth;
+            print "The volume of a " + width + "m x " + height + "m x " + depth + "m cube is " + volume + "m^3";
+        }
+    }
 
-volume = width_1 * height_1 * depth_1;
+    if ARG_2 == "sphere" {
+        radius = ARG_3;
 
-width_2 = 5;
-height_2 = 5;
-depth_2 = 5;
+        if radius == nil print "Please provide a radius argument";
 
-volume = volume + width_2 * height_2 * depth_2;
+        if radius != nil {
+            volume = (4/3)*Pi*radius*radius;
+            print "The volume of a sphere with radius " + radius + "m is " + volume + "m^3";
+        }
+    }
 
-print "---";
-print "The total volume of two cubes, who's dimensions are as follows:";
-print "  Cube #1: " + width_1 + "m x " + height_1 + "m x " + depth_1 + "m";
-print "  Cube #2: " + width_1 + "m x " + height_1 + "m x " + depth_1 + "m";
-print "Is " + volume + "m^3";
-print "---";
-print "";
+    if ARG_2 != "cube"
+        if ARG_2 != "sphere"
+            print "Unknown shape: " + ARG_2;
+}

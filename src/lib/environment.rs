@@ -9,10 +9,7 @@ pub struct Environment {
 impl Environment {
     pub fn new() -> Self {
         Self {
-            variables: HashMap::from([(
-                "VERSION".to_string(),
-                LiteralValue::String(env!("CARGO_PKG_VERSION").to_string()),
-            )]),
+            variables: HashMap::new(),
         }
     }
 
