@@ -5,48 +5,64 @@ use super::{
 
 pub struct Interpreter {
     environment: Environment,
-    program: Program,
-    current: usize,
 }
 
 impl Interpreter {
-    pub fn new(program: Program) -> Self {
+    pub fn new(environment: Environment) -> Self {
         Self {
-            environment: Environment::new(),
-            program,
-            current: 0,
+            environment,
         }
     }
 
-    pub fn run(&mut self) {
-        while self.current < self.program.len() {
-            self.evaluate_declaration();
-            self.current += 1;
+    pub fn run(&mut self, program: &Program) {
+        self.evaluate_declarations(program.get_declarations());
+    }
+
+    pub fn evaluate_declarations(&mut self, declarations: &Vec<Declaration>) {
+        for declaration in declarations.iter() {
+            self.evaluate_declaration(declaration);
         }
     }
 
-    pub fn evaluate_declarations(&mut self, declarations: &mut Vec<Declaration>) {
-        self.program.add_declarations(declarations);
-        self.run();
-    }
-
-    fn evaluate_declaration(&mut self) {
-        match self.program.get(self.current) {
-            Some(Declaration::VariableAssignment { identifier, value }) => {
+    fn evaluate_declaration(&mut self, declaration: &Declaration) {
+        match declaration {
+            Declaration::VariableAssignment { identifier, value } => {
                 self.environment
                     .assign(identifier, self.evaluate_expression(value));
-            }
-            Some(Declaration::Statement(statement)) => {
+            },
+            Declaration::Statement(statement) => {
                 self.evaluate_statement(statement);
-            }
-            None => {}
+            },
+            Declaration::Block(block) => {
+                let declarations = block.get_declarations();
+                self.evaluate_declarations(declarations);
+            },
         }
     }
 
-    fn evaluate_statement(&self, statement: &Statement) {
+    fn evaluate_statement(&mut self, statement: &Statement) {
         match statement {
+            Statement::If { condition, declaration } => self.if_statement(condition, declaration),
             Statement::Print(expression) => self.print(expression),
             Statement::Expression(expression) => self.evaluate_expression_statement(expression),
+        }
+    }
+
+    fn if_statement(&mut self, condition: &Expression, declaration: &Declaration) {
+        let condition_value = self.evaluate_expression(condition);
+
+        match condition_value {
+            LiteralValue::Boolean(value) => if value {
+                self.evaluate_declaration(declaration);
+            },
+            LiteralValue::String(value) => if !value.eq("") {
+                self.evaluate_declaration(declaration);
+            },
+            LiteralValue::Number(value) => if value != 0.0 {
+                self.evaluate_declaration(declaration);
+            },
+            LiteralValue::Identifier(_) => panic!("Unexpected unresolved identifier"),
+            LiteralValue::Nil => {},
         }
     }
 
@@ -144,8 +160,6 @@ mod tests {
     fn one_equals_equals_one() {
         let expression = expr!("1==1");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -158,8 +172,6 @@ mod tests {
     fn one_equals_equals_two() {
         let expression = expr!("1==2");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -172,8 +184,6 @@ mod tests {
     fn one_equals_equals_true() {
         let expression = expr!("1==true");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -186,8 +196,6 @@ mod tests {
     fn one_bang_equals_one() {
         let expression = expr!("1!=1");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -200,8 +208,6 @@ mod tests {
     fn one_bang_equals_two() {
         let expression = expr!("1!=2");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -214,8 +220,6 @@ mod tests {
     fn one_greater_two() {
         let expression = expr!("1>2");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -228,8 +232,6 @@ mod tests {
     fn string_star_number() {
         let expression = expr!("\"Hello \"*3");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -242,8 +244,6 @@ mod tests {
     fn string_star_negative_number() {
         let expression = expr!("\"Hello \"*-3");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -256,8 +256,6 @@ mod tests {
     fn string_star_float() {
         let expression = expr!("\"Hello \"*3.9");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -270,8 +268,6 @@ mod tests {
     fn complex_expression() {
         let expression = expr!("!false == 5 > (1 - 2 + 5 / 2) * 100 - 10");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -284,8 +280,6 @@ mod tests {
     fn regression_number_multiply_string() {
         let expression = expr!("3*\"Hello \"");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 
@@ -298,8 +292,6 @@ mod tests {
     fn regression_divison_order() {
         let expression = expr!("1+2/4");
         let interpreter = Interpreter {
-            current: 0,
-            program: Program::new(),
             environment: Environment::new(),
         };
 

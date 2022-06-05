@@ -6,7 +6,7 @@ mod lib;
 fn repl() {
     let mut stdout = io::stdout().lock();
     let mut stdin = io::stdin().lock();
-    let mut interpreter = lib::interpreter::Interpreter::new(lib::parser::Program::new());
+    let mut interpreter = lib::interpreter::Interpreter::new(lib::environment::Environment::new());
 
     loop {
         let mut input = String::new();
@@ -24,18 +24,18 @@ fn repl() {
         let mut scanner = lib::scanner::Scanner::from_source(&input);
         let mut parser =
             lib::parser::Parser::new(scanner.scan_tokens().expect("Failed at scanner"));
-        let mut declarations = parser.parse().to_declarations();
-        interpreter.evaluate_declarations(&mut declarations);
+        let declarations = parser.parse();
+        interpreter.run(&declarations);
     }
 }
 
 fn run_script(script_file: &String) {
     let input = fs::read_to_string(script_file).expect("Something went wrong reading the file");
-    let mut interpreter = lib::interpreter::Interpreter::new(lib::parser::Program::new());
+    let mut interpreter = lib::interpreter::Interpreter::new(lib::environment::Environment::new());
     let mut scanner = lib::scanner::Scanner::from_source(&input);
     let mut parser = lib::parser::Parser::new(scanner.scan_tokens().expect("Failed at scanner"));
-    let mut declarations = parser.parse().to_declarations();
-    interpreter.evaluate_declarations(&mut declarations);
+    let program = parser.parse();
+    interpreter.run(&program);
 }
 
 fn main() {

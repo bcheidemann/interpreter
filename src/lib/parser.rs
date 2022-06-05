@@ -158,28 +158,12 @@ impl Mul for LiteralValue {
 pub struct Program(Vec<Declaration>);
 
 impl Program {
-    pub fn new() -> Self {
-        Self(vec![])
-    }
-
     pub fn add_declaration(&mut self, declaration: Declaration) {
         self.0.push(declaration);
     }
 
-    pub fn add_declarations(&mut self, declarations: &mut Vec<Declaration>) {
-        self.0.append(declarations);
-    }
-
-    pub fn get(&self, index: usize) -> Option<&Declaration> {
-        self.0.get(index)
-    }
-
-    pub fn to_declarations(self) -> Vec<Declaration> {
-        self.0
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
+    pub fn get_declarations(&self) -> &Vec<Declaration> {
+        &self.0
     }
 }
 
@@ -190,11 +174,22 @@ pub enum Declaration {
         value: Expression,
     },
     Statement(Statement),
+    Block(Block),
+}
+
+#[derive(Debug)]
+pub struct Block(Vec<Declaration>);
+
+impl Block {
+    pub fn get_declarations(&self) -> &Vec<Declaration> {
+        &self.0
+    }
 }
 
 #[derive(Debug)]
 pub enum Statement {
     Print(Expression),
+    If { condition: Expression, declaration: Box<Declaration> },
     Expression(Expression),
 }
 
@@ -273,11 +268,39 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn consume_brace(&mut self, direction: TokenDirection) {
+        match direction {
+            TokenDirection::Left => if matches!(self.peek(), Some(Token::Brace(TokenDirection::Left))) {
+                self.advance()
+            } else {
+                panic!("Expected left brace")
+            },
+            TokenDirection::Right => if matches!(self.peek(), Some(Token::Brace(TokenDirection::Right))) {
+                self.advance()
+            } else {
+                panic!("Expected right brace")
+            },
+        }
+    }
+
     fn declaration(&mut self) -> Declaration {
         match self.peek() {
+            Some(Token::Brace(TokenDirection::Left)) => Declaration::Block(self.block()),
             Some(Token::Identifier(_)) => self.identifier(),
             _ => self.statement_declaration(),
         }
+    }
+
+    fn block(&mut self) -> Block {
+        self.consume_brace(TokenDirection::Left);
+        
+        let mut declarations = vec![];
+        while !matches!(self.peek(), Some(Token::Brace(TokenDirection::Right))) {
+            declarations.push(self.declaration());
+        }
+        self.consume_brace(TokenDirection::Right);
+
+        Block(declarations)
     }
 
     fn identifier(&mut self) -> Declaration {
@@ -308,6 +331,7 @@ impl<'a> Parser<'a> {
     fn statement(&mut self) -> Statement {
         match self.peek() {
             Some(Token::Keyword(Keyword::Print)) => self.print(),
+            Some(Token::Keyword(Keyword::If)) => self.if_statement(),
             _ => self.expression_statement(),
         }
     }
@@ -317,6 +341,13 @@ impl<'a> Parser<'a> {
         let expr = self.expression();
         self.consume_semicolon();
         Statement::Print(expr)
+    }
+
+    fn if_statement(&mut self) -> Statement {
+        self.advance();
+        let condition = self.expression();
+        let declaration = Box::new(self.declaration());
+        Statement::If { condition, declaration }
     }
 
     fn expression_statement(&mut self) -> Statement {
