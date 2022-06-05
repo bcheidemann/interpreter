@@ -24,7 +24,7 @@ fn main() {
         let mut scanner = lib::scanner::Scanner::from_source(&input);
         let mut parser =
             lib::parser::Parser::new(scanner.scan_tokens().expect("Failed at scanner"));
-        let mut statements = parser.parse().to_statements();
-        interpreter.evaluate_statements(&mut statements);
+        let mut declarations = parser.parse().to_declarations();
+        interpreter.evaluate_declarations(&mut declarations);
     }
 }

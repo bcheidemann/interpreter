@@ -1,6 +1,7 @@
-use super::parser::{Expression, LiteralValue, Operator, Statement, Program};
+use super::{parser::{Expression, LiteralValue, Operator, Statement, Program, Declaration}, environment::Environment};
 
 pub struct Interpreter {
+    environment: Environment,
     program: Program,
     current: usize,
 }
@@ -8,21 +9,34 @@ pub struct Interpreter {
 impl Interpreter {
     pub fn new(program: Program) -> Self {
         Self {
+            environment: Environment::new(),
             program,
             current: 0,
         }
     }
 
     pub fn run(&mut self) {
-        while let Some(statement) = self.program.get(self.current) {
-            self.evaluate_statement(statement);
+        while self.current < self.program.len() {
+            self.evaluate_declaration();
             self.current += 1;
         }
     }
 
-    pub fn evaluate_statements(&mut self, statements: &mut Vec<Statement>) {
-        self.program.add_statements(statements);
+    pub fn evaluate_declarations(&mut self, declarations: &mut Vec<Declaration>) {
+        self.program.add_declarations(declarations);
         self.run();
+    }
+
+    fn evaluate_declaration(&mut self) {
+        match self.program.get(self.current) {
+            Some(Declaration::VariableAssignment { identifier, value }) => {
+                self.environment.assign(identifier, self.evaluate_expression(value));
+            },
+            Some(Declaration::Statement(statement)) => {
+                self.evaluate_statement(statement);
+            },
+            None => {},
+        }
     }
 
     fn evaluate_statement(&self, statement: &Statement) {
@@ -34,7 +48,7 @@ impl Interpreter {
 
     fn print(&self, expression: &Expression) {
         let result = self.evaluate_expression(expression);
-        println!("{}", result.to_string());
+        println!("{}", result.to_string())
     }
 
     fn evaluate_expression_statement(&self, expression: &Expression) {
@@ -54,6 +68,9 @@ impl Interpreter {
             Expression::Grouping(expression) => {
                 self.evaluate_expression(expression)
             },
+            Expression::Literal(LiteralValue::Identifier(identifier)) => {
+                self.environment.resolve(identifier).clone()
+            }
             Expression::Literal(literal_value) => {
                 literal_value.clone()
             },
@@ -125,6 +142,7 @@ impl Interpreter {
                     LiteralValue::String(_) => panic!("String values cannot be negated"),
                     LiteralValue::Number(value) => LiteralValue::Number(-value.clone()),
                     LiteralValue::Nil => panic!("Nil values cannot be negated"),
+                    LiteralValue::Identifier(identifier) => panic!("Unexpected unresolved identifier"),
                 }
             },
             Operator::Plus => self.evaluate_expression(right),
@@ -136,6 +154,7 @@ impl Interpreter {
                     LiteralValue::String(value) => LiteralValue::Boolean(value.len() == 0),
                     LiteralValue::Number(value) => LiteralValue::Boolean(value == 0.0),
                     LiteralValue::Nil => LiteralValue::Boolean(true),
+                    LiteralValue::Identifier(identifier) => panic!("Unexpected unresolved identifier"),
                 }
             },
         }
@@ -147,6 +166,7 @@ mod tests {
     use crate::{expr, tokens};
     use crate::lib::parser::Parser;
     use crate::lib::scanner::Scanner;
+    use crate::lib::environment::Environment;
 
     use super::*;
 
@@ -156,6 +176,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -169,6 +190,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -182,6 +204,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -195,6 +218,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -208,6 +232,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -221,6 +246,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -234,6 +260,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -247,6 +274,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -260,6 +288,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -273,6 +302,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -286,6 +316,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);
@@ -299,6 +330,7 @@ mod tests {
         let interpreter = Interpreter {
             current: 0,
             program: Program::new(),
+            environment: Environment::new(),
         };
 
         let result = Interpreter::evaluate_expression(&interpreter, &expression);

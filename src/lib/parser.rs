@@ -41,6 +41,7 @@ pub enum LiteralValue {
     Boolean(bool),
     String(String),
     Number(f32),
+    Identifier(String),
     Nil,
 }
 
@@ -51,6 +52,7 @@ impl LiteralValue {
             LiteralValue::String(value) => format!("{value}"),
             LiteralValue::Number(value) => format!("{value}"),
             LiteralValue::Nil => "nil".to_string(),
+            LiteralValue::Identifier(identifier) => format!("{identifier}"),
         }
     }
 }
@@ -67,6 +69,7 @@ impl Sub for LiteralValue {
                 _ => panic!("Cannot subtract values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot subtract nil values"),
+            LiteralValue::Identifier(_) => panic!("Cannot subtract unresolved identifier"),
         }
     }
 }
@@ -86,6 +89,7 @@ impl Add for LiteralValue {
                 _ => panic!("Cannot add values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot add nil values"),
+            LiteralValue::Identifier(_) => panic!("Cannot add unresolved identifier"),
         }
     }
 }
@@ -102,6 +106,7 @@ impl Div for LiteralValue {
                 _ => panic!("Cannot divide values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot divide nil values"),
+            LiteralValue::Identifier(_) => panic!("Cannot divide unresolved identifier"),
         }
     }
 }
@@ -120,37 +125,53 @@ impl Mul for LiteralValue {
             },
             LiteralValue::Number(lhs_value) => match rhs {
                 LiteralValue::Number(rhs_value) => LiteralValue::Number(lhs_value * rhs_value),
-                LiteralValue::String(rhs_value) => LiteralValue::String(rhs_value.repeat(lhs_value as usize)),
+                LiteralValue::String(rhs_value) => {
+                    LiteralValue::String(rhs_value.repeat(lhs_value as usize))
+                }
                 _ => panic!("Cannot multiply values with different types"),
             },
             LiteralValue::Nil => panic!("Cannot multiply nil values"),
+            LiteralValue::Identifier(_) => panic!("Cannot multiply unresolved identifier"),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Program(Vec<Statement>);
+pub struct Program(Vec<Declaration>);
 
 impl Program {
     pub fn new() -> Self {
         Self(vec![])
     }
 
-    pub fn add_statement(&mut self, statement: Statement) {
-        self.0.push(statement);
+    pub fn add_declaration(&mut self, declaration: Declaration) {
+        self.0.push(declaration);
     }
 
-    pub fn add_statements(&mut self, statements: &mut Vec<Statement>) {
-        self.0.append(statements);
+    pub fn add_declarations(&mut self, declarations: &mut Vec<Declaration>) {
+        self.0.append(declarations);
     }
 
-    pub fn get(&self, index: usize) -> Option<&Statement> {
+    pub fn get(&self, index: usize) -> Option<&Declaration> {
         self.0.get(index)
     }
 
-    pub fn to_statements(self) -> Vec<Statement> {
+    pub fn to_declarations(self) -> Vec<Declaration> {
         self.0
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
+
+#[derive(Debug)]
+pub enum Declaration {
+    VariableAssignment {
+        identifier: String,
+        value: Expression,
+    },
+    Statement(Statement),
 }
 
 #[derive(Debug)]
@@ -194,7 +215,7 @@ impl<'a> Parser<'a> {
         let mut program = Program(vec![]);
 
         while self.current < self.tokens.len() {
-            program.add_statement(self.statement());
+            program.add_declaration(self.declaration());
         }
 
         program
@@ -209,6 +230,10 @@ impl<'a> Parser<'a> {
         self.tokens.get(self.current)
     }
 
+    fn peek_nth(&self, n: usize) -> Option<&Token> {
+        self.tokens.get(self.current + n)
+    }
+
     fn peek_then_advance(&mut self) -> Option<&Token> {
         self.current += 1;
         self.tokens.get(self.current - 1)
@@ -218,13 +243,48 @@ impl<'a> Parser<'a> {
         self.current += 1;
     }
 
+    fn advance_nth(&mut self, n: usize) {
+        self.current += n;
+    }
+
     fn consume_semicolon(&mut self) {
         if matches!(self.peek(), Some(Token::SemiColon)) {
             self.advance();
-        }
-        else {
+        } else {
             panic!("Expected a semicolon after a print statement");
         }
+    }
+
+    fn declaration(&mut self) -> Declaration {
+        match self.peek() {
+            Some(Token::Identifier(_)) => self.identifier(),
+            _ => self.statement_declaration(),
+        }
+    }
+
+    fn identifier(&mut self) -> Declaration {
+        self.variable_assignment()
+    }
+
+    fn variable_assignment(&mut self) -> Declaration {
+        if let Some(Token::Identifier(identifier)) = self.peek() {
+            let identifier = identifier.to_string();
+            if let Some(Token::Equals) = self.peek_nth(1) {
+                self.advance_nth(2);
+                let assignment = Declaration::VariableAssignment {
+                    identifier,
+                    value: self.expression(),
+                };
+                self.consume_semicolon();
+                return assignment;
+            }
+        }
+
+        self.statement_declaration()
+    }
+
+    fn statement_declaration(&mut self) -> Declaration {
+        Declaration::Statement(self.statement())
     }
 
     fn statement(&mut self) -> Statement {
@@ -358,6 +418,9 @@ impl<'a> Parser<'a> {
             Some(Token::String(string)) => Expression::Literal(LiteralValue::String(
                 string[1..string.len() - 1].to_string(),
             )),
+            Some(Token::Identifier(identifier)) => {
+                Expression::Literal(LiteralValue::Identifier(identifier.to_string()))
+            }
             Some(Token::Paren(TokenDirection::Left)) => {
                 let expr = self.expression();
                 match self.peek_then_advance() {
@@ -471,17 +534,24 @@ mod tests {
 
         let result = parser.parse();
 
-        assert_eq!(format!("{result:?}"), "Program([Print(Literal(Number(42.0)))])");
+        assert_eq!(
+            format!("{result:?}"),
+            "Program([Statement(Print(Literal(Number(42.0))))])"
+        );
     }
 
     #[test]
     fn print_twice() {
-        let tokens = tokens!("print 42; print true;").expect("Scanner should not fail to parse source");
+        let tokens =
+            tokens!("print 42; print true;").expect("Scanner should not fail to parse source");
         let mut parser = Parser::new(&tokens);
 
         let result = parser.parse();
 
-        assert_eq!(format!("{result:?}"), "Program([Print(Literal(Number(42.0))), Print(Literal(Boolean(true)))])");
+        assert_eq!(
+            format!("{result:?}"),
+            "Program([Statement(Print(Literal(Number(42.0)))), Statement(Print(Literal(Boolean(true))))])"
+        );
     }
 
     #[test]
@@ -491,6 +561,9 @@ mod tests {
 
         let result = parser.parse();
 
-        assert_eq!(format!("{result:?}"), "Program([Expression(Literal(Number(42.0)))])");
+        assert_eq!(
+            format!("{result:?}"),
+            "Program([Statement(Expression(Literal(Number(42.0))))])"
+        );
     }
 }
