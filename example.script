@@ -40,7 +40,11 @@ if ARG_2 != nil {
 
         if width != nil if height != nil if depth != nil {
             volume = width * height * depth;
-            print "The volume of a " + width + "m x " + height + "m x " + depth + "m cube is " + volume + "m^3";
+            print "The volume of a " + width + "m " +
+                                "x " + height + "m " +
+                                "x " + depth + "m " +
+                                "cube " +
+                                "is " + volume + "m^3";
         }
     }
 
@@ -51,7 +55,8 @@ if ARG_2 != nil {
 
         if radius != nil {
             volume = (4/3)*Pi*radius*radius;
-            print "The volume of a sphere with radius " + radius + "m is " + volume + "m^3";
+            print "The volume of a sphere with radius " + radius + "m " +
+                                                  "is " + volume + "m^3";
         }
     }
 
